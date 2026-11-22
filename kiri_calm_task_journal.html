@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KIRI — 静かなタスク日誌</title>
+  <!-- Load Tailwind CSS for fluid layout and responsive utilities -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load Editorial Typography: Cormorant Garamond, Shippori Mincho, and Noto Sans JP -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Noto+Sans+JP:wght@300;400;500&family=Shippori+Mincho:wght@400;500&display=swap" rel="stylesheet">
+
+  <script>
+    // Configure Tailwind with custom palette and editorial typography
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            canvas: '#FAF7F8',
+            surface: '#FFFFFF',
+            blush: {
+              soft: '#F5E4E8',
+              accent: '#D99BA8',
+              deep: '#8E5866'
+            },
+            mist: {
+              soft: '#E4EEF5',
+              accent: '#88AECB',
+              deep: '#4B6E8A'
+            },
+            ink: {
+              primary: '#2B303A',
+              secondary: '#67707E',
+              muted: '#9AA2B1'
+            },
+            hairline: '#EAE4E8'
+          },
+          fontFamily: {
+            serif: ['"Shippori Mincho"', 'serif'],
+            display: ['"Cormorant Garamond"', 'serif'],
+            sans: ['"Noto Sans JP"', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Base editorial styling and subtle ambient gradient */
+    body {
+      background-color: #FAF7F8;
+      background-image:
+        radial-gradient(circle at 12% 10%, rgba(245, 228, 232, 0.65) 0%, transparent 45%),
+        radial-gradient(circle at 90% 24%, rgba(228, 238, 245, 0.7) 0%, transparent 48%),
+        radial-gradient(circle at 50% 95%, rgba(245, 228, 232, 0.35) 0%, transparent 55%);
+      background-attachment: fixed;
+      color: #2B303A;
+      font-family: 'Noto Sans JP', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Smooth transitions for task rows and checkboxes */
+    .task-item {
+      transition: background-color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease;
+    }
+
+    .check-circle {
+      transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #DFD7DC;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-blush-soft selection:text-ink-primary">
+
+  <!-- Main Centered Container with Generous Whitespace -->
+  <div class="w-full max-w-2xl mx-auto px-5 sm:px-8 pt-12 sm:pt-20 pb-20 flex-grow">
+
+    <!-- Editorial Header -->
+    <header class="mb-12 sm:mb-14">
+      <div class="flex flex-wrap items-baseline justify-between gap-3 mb-4">
+        <span class="font-display italic text-sm sm:text-base tracking-[0.22em] text-mist-deep">
+          KIRI — QUIET TASK JOURNAL
+        </span>
+        <time id="current-date" class="font-display text-sm tracking-[0.16em] text-ink-secondary"></time>
+      </div>
+
+      <h1 class="font-serif text-2xl sm:text-3xl font-normal tracking-[0.14em] text-ink-primary leading-relaxed">
+        今日の小さな歩み
+      </h1>
+      <p class="mt-3 text-xs sm:text-sm text-ink-secondary font-light tracking-[0.06em] leading-relaxed">
+        ひとつずつ整え、静かに手放す。穏やかなリズムのためのタスク日誌。
+      </p>
+
+      <!-- Subtle two-tone accent rule (soft pastel pink & muted blue) -->
+      <div class="mt-7 flex items-center gap-2">
+        <span class="h-[2px] w-12 rounded-full bg-blush-accent/70"></span>
+        <span class="h-[2px] w-16 rounded-full bg-mist-accent/70"></span>
+        <span class="h-[1px] flex-grow bg-hairline"></span>
+      </div>
+    </header>
+
+    <!-- Add Task Form -->
+    <section aria-label="新しいタスクを追加" class="mb-10">
+      <form id="task-form" class="bg-surface/90 backdrop-blur-sm border border-hairline rounded-2xl p-2 sm:p-2.5 shadow-[0_8px_30px_rgba(75,110,138,0.05)] flex flex-col sm:flex-row items-stretch sm:items-center gap-2 focus-within:border-mist-accent transition-colors">
+        <label for="task-input" class="sr-only">タスク内容を入力</label>
+        <input
+          id="task-input"
+          type="text"
+          maxlength="160"
+          placeholder="いま整えたいタスクを書き留める..."
+          autocomplete="off"
+          class="flex-grow bg-transparent px-4 py-3 text-sm sm:text-[15px] text-ink-primary placeholder:text-ink-muted focus:outline-none rounded-xl"
+        >
+        <button
+          type="submit"
+          class="px-6 py-3 rounded-xl bg-mist-soft hover:bg-mist-accent/35 active:bg-mist-accent/45 text-mist-deep font-medium text-xs sm:text-sm tracking-[0.14em] transition-colors shrink-0 cursor-pointer border border-mist-accent/30"
+        >
+          追加する
+        </button>
+      </form>
+      <!-- Inline status / feedback message (never using alert()) -->
+      <p id="form-feedback" role="status" aria-live="polite" class="mt-2.5 px-2 text-xs text-blush-deep min-h-[1.25rem] transition-opacity"></p>
+    </section>
+
+    <!-- Filter Controls & Task Counter -->
+    <section aria-label="タスクの絞り込みと件数" class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-hairline pb-4">
+      <div role="tablist" aria-label="表示フィルター" class="inline-flex items-center gap-1.5 bg-surface/70 p-1 rounded-xl border border-hairline self-start">
+        <button
+          type="button"
+          role="tab"
+          data-filter="all"
+          aria-selected="true"
+          class="filter-btn px-3.5 py-1.5 rounded-lg text-xs tracking-[0.12em] transition-all cursor-pointer bg-blush-soft text-blush-deep font-medium"
+        >
+          すべて <span id="count-all" class="ml-1 font-display text-sm">0</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          data-filter="active"
+          aria-selected="false"
+          class="filter-btn px-3.5 py-1.5 rounded-lg text-xs tracking-[0.12em] transition-all cursor-pointer text-ink-secondary hover:text-ink-primary"
+        >
+          未完了 <span id="count-active" class="ml-1 font-display text-sm">0</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          data-filter="completed"
+          aria-selected="false"
+          class="filter-btn px-3.5 py-1.5 rounded-lg text-xs tracking-[0.12em] transition-all cursor-pointer text-ink-secondary hover:text-ink-primary"
+        >
+          完了済み <span id="count-completed" class="ml-1 font-display text-sm">0</span>
+        </button>
+      </div>
+
+      <p id="summary-text" class="text-xs text-ink-secondary tracking-[0.06em] px-1">
+        残りのタスクはありません
+      </p>
+    </section>
+
+    <!-- Task List Container -->
+    <main aria-label="タスク一覧">
+      <ul id="task-list" class="space-y-3"></ul>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden text-center py-16 px-6 bg-surface/60 border border-hairline/80 rounded-2xl mt-4">
+        <div class="w-10 h-10 mx-auto mb-4 rounded-full bg-blush-soft/80 flex items-center justify-center text-blush-deep font-serif text-base">
+          ◦
+        </div>
+        <p id="empty-title" class="font-serif text-base text-ink-primary tracking-[0.1em] mb-1.5">
+          静かな余白が広がっています
+        </p>
+        <p id="empty-subtitle" class="text-xs text-ink-secondary font-light leading-relaxed">
+          上の入力欄から、今日の小さなタスクをひとつ追加してみてください。
+        </p>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Subtle Editorial Footer -->
+  <footer class="w-full max-w-2xl mx-auto px-5 sm:px-8 py-8 border-t border-hairline/70 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-ink-muted">
+    <span class="font-display italic tracking-[0.18em]">KIRI Task Journal</span>
+    <span class="tracking-[0.08em]">ブラウザ内に自動保存されます</span>
+  </footer>
+
+  <script>
+    /**
+     * KIRI Task Journal Application
+     * State is stored in `localStorage` under `KIRI_TASKS_V1`.
+     */
+    (function () {
+      'use strict';
+
+      const STORAGE_KEY = 'KIRI_TASKS_V1';
+
+      // Application state
+      let state = {
+        tasks: [],
+        filter: 'all' // 'all' | 'active' | 'completed'
+      };
+
+      // DOM References
+      const dateEl = document.getElementById('current-date');
+      const formEl = document.getElementById('task-form');
+      const inputEl = document.getElementById('task-input');
+      const feedbackEl = document.getElementById('form-feedback');
+      const listEl = document.getElementById('task-list');
+      const emptyStateEl = document.getElementById('empty-state');
+      const emptyTitleEl = document.getElementById('empty-title');
+      const emptySubtitleEl = document.getElementById('empty-subtitle');
+      const summaryTextEl = document.getElementById('summary-text');
+      const countAllEl = document.getElementById('count-all');
+      const countActiveEl = document.getElementById('count-active');
+      const countCompletedEl = document.getElementById('count-completed');
+      const filterButtons = document.querySelectorAll('.filter-btn');
+
+      let feedbackTimer = null;
+
+      /**
+       * Formats current date in an editorial style (e.g., 2026.11.22 SUN).
+       */
+      function renderDate() {
+        try {
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const day = String(now.getDate()).padStart(2, '0');
+          const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+          const weekday = weekdays[now.getDay()];
+          dateEl.textContent = `${year}.${month}.${day} ${weekday}`;
+        } catch (err) {
+          dateEl.textContent = '';
+        }
+      }
+
+      /**
+       * Shows a gentle inline message without blocking dialogs.
+       */
+      function showFeedback(message) {
+        feedbackEl.textContent = message;
+        if (feedbackTimer) {
+          clearTimeout(feedbackTimer);
+        }
+        if (message) {
+          feedbackTimer = setTimeout(() => {
+            feedbackEl.textContent = '';
+          }, 2600);
+        }
+      }
+
+      /**
+       * Loads persisted tasks safely from localStorage.
+       */
+      function loadTasks() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) return [];
+          return parsed.filter(
+            (item) =>
+              item &&
+              typeof item.id === 'string' &&
+              typeof item.title === 'string' &&
+              typeof item.completed === 'boolean'
+          );
+        } catch (err) {
+          console.error('Failed to load tasks from localStorage:', err);
+          return [];
+        }
+      }
+
+      /**
+       * Saves current tasks safely to localStorage.
+       */
+      function saveTasks() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
+        } catch (err) {
+          console.error('Failed to save tasks to localStorage:', err);
+          showFeedback('保存領域に空きがないため、変更を保持できない場合があります。');
+        }
+      }
+
+      /**
+       * Generates a unique identifier for a new task.
+       */
+      function createId() {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+          return crypto.randomUUID();
+        }
+        return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      }
+
+      /**
+       * Adds a new task if input is non-empty.
+       */
+      function addTask(rawTitle) {
+        const trimmed = rawTitle.trim();
+        if (!trimmed) {
+          showFeedback('タスクの内容を入力してください。');
+          inputEl.focus();
+          return;
+        }
+
+        const newTask = {
+          id: createId(),
+          title: trimmed,
+          completed: false,
+          createdAt: new Date().toISOString()
+        };
+
+        state.tasks.unshift(newTask);
+        saveTasks();
+        render();
+        showFeedback('');
+      }
+
+      /**
+       * Toggles completion state of a task by ID.
+       */
+      function toggleTask(id) {
+        const target = state.tasks.find((task) => task.id === id);
+        if (!target) return;
+        target.completed = !target.completed;
+        saveTasks();
+        render();
+      }
+
+      /**
+       * Deletes a task by ID.
+       */
+      function deleteTask(id) {
+        const nextTasks = state.tasks.filter((task) => task.id !== id);
+        if (nextTasks.length === state.tasks.length) return;
+        state.tasks = nextTasks;
+        saveTasks();
+        render();
+      }
+
+      /**
+       * Updates active filter ('all' | 'active' | 'completed').
+       */
+      function setFilter(nextFilter) {
+        if (!['all', 'active', 'completed'].includes(nextFilter)) return;
+        state.filter = nextFilter;
+        render();
+      }
+
+      /**
+       * Updates filter tab styles and ARIA attributes.
+       */
+      function renderFilterButtons() {
+        filterButtons.forEach((btn) => {
+          const isSelected = btn.dataset.filter === state.filter;
+          btn.setAttribute('aria-selected', String(isSelected));
+
+          if (isSelected) {
+            btn.className =
+              'filter-btn px-3.5 py-1.5 rounded-lg text-xs tracking-[0.12em] transition-all cursor-pointer bg-blush-soft text-blush-deep font-medium shadow-[0_1px_4px_rgba(217,155,168,0.25)]';
+          } else {
+            btn.className =
+              'filter-btn px-3.5 py-1.5 rounded-lg text-xs tracking-[0.12em] transition-all cursor-pointer text-ink-secondary hover:text-ink-primary hover:bg-canvas/70';
+          }
+        });
+      }
+
+      /**
+       * Updates counts and summary message.
+       */
+      function renderCounts() {
+        const total = state.tasks.length;
+        const completedCount = state.tasks.filter((t) => t.completed).length;
+        const activeCount = total - completedCount;
+
+        countAllEl.textContent = total;
+        countActiveEl.textContent = activeCount;
+        countCompletedEl.textContent = completedCount;
+
+        if (total === 0) {
+          summaryTextEl.textContent = 'タスクはまだありません';
+        } else if (activeCount === 0) {
+          summaryTextEl.textContent = 'すべてのタスクが完了しました';
+        } else {
+          summaryTextEl.textContent = `未完了 ${activeCount} 件 / 全 ${total} 件`;
+        }
+      }
+
+      /**
+       * Creates a single task list item DOM node safely.
+       */
+      function createTaskElement(task) {
+        const li = document.createElement('li');
+        li.className = task.completed
+          ? 'task-item group flex items-center justify-between gap-4 px-4 sm:px-5 py-4 rounded-2xl bg-surface/65 border border-hairline/75'
+          : 'task-item group flex items-center justify-between gap-4 px-4 sm:px-5 py-4 rounded-2xl bg-surface/95 border border-hairline hover:border-mist-accent/60 shadow-[0_4px_18px_rgba(75,110,138,0.04)]';
+
+        // Left side: custom pastel pink / muted blue toggle + title
+        const leftWrap = document.createElement('div');
+        leftWrap.className = 'flex items-center gap-3.5 min-w-0 flex-grow';
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.setAttribute('aria-pressed', String(task.completed));
+        toggleBtn.setAttribute(
+          'aria-label',
+          task.completed ? `「${task.title}」を未完了に戻す` : `「${task.title}」を完了にする`
+        );
+        toggleBtn.className = task.completed
+          ? 'check-circle w-5 h-5 rounded-full border border-mist-accent bg-mist-soft text-mist-deep flex items-center justify-center shrink-0 cursor-pointer'
+          : 'check-circle w-5 h-5 rounded-full border border-blush-accent/80 bg-surface hover:bg-blush-soft/70 flex items-center justify-center shrink-0 cursor-pointer';
+
+        if (task.completed) {
+          toggleBtn.innerHTML = `
+            <svg class="w-3 h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2.5 6.2L5 8.7L9.5 3.5" />
+            </svg>
+          `;
+        }
+
+        toggleBtn.addEventListener('click', () => toggleTask(task.id));
+
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = task.title;
+        titleSpan.className = task.completed
+          ? 'text-sm sm:text-[15px] text-ink-muted line-through decoration-mist-accent/80 break-words leading-relaxed'
+          : 'text-sm sm:text-[15px] text-ink-primary break-words leading-relaxed';
+
+        leftWrap.appendChild(toggleBtn);
+        leftWrap.appendChild(titleSpan);
+
+        // Right side: delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.textContent = '削除';
+        deleteBtn.setAttribute('aria-label', `「${task.title}」を削除`);
+        deleteBtn.className =
+          'text-xs text-ink-muted hover:text-blush-deep hover:bg-blush-soft/60 px-2.5 py-1 rounded-lg transition-colors shrink-0 cursor-pointer opacity-80 sm:opacity-60 group-hover:opacity-100 focus:opacity-100';
+
+        deleteBtn.addEventListener('click', () => deleteTask(task.id));
+
+        li.appendChild(leftWrap);
+        li.appendChild(deleteBtn);
+
+        return li;
+      }
+
+      /**
+       * Renders the filtered task list and empty state.
+       */
+      function renderList() {
+        const filteredTasks = state.tasks.filter((task) => {
+          if (state.filter === 'active') return !task.completed;
+          if (state.filter === 'completed') return task.completed;
+          return true;
+        });
+
+        listEl.innerHTML = '';
+
+        if (filteredTasks.length === 0) {
+          emptyStateEl.classList.remove('hidden');
+
+          if (state.filter === 'active') {
+            emptyTitleEl.textContent = '未完了のタスクはありません';
+            emptySubtitleEl.textContent = '今のところはひと息つける状態です。';
+          } else if (state.filter === 'completed') {
+            emptyTitleEl.textContent = '完了済みのタスクはまだありません';
+            emptySubtitleEl.textContent = 'やり終えたタスクにチェックを入れると、ここに記録されます。';
+          } else {
+            emptyTitleEl.textContent = '静かな余白が広がっています';
+            emptySubtitleEl.textContent = '上の入力欄から、今日の小さなタスクをひとつ追加してみてください。';
+          }
+        } else {
+          emptyStateEl.classList.add('hidden');
+          const fragment = document.createDocumentFragment();
+          filteredTasks.forEach((task) => {
+            fragment.appendChild(createTaskElement(task));
+          });
+          listEl.appendChild(fragment);
+        }
+      }
+
+      /**
+       * Full UI render pass.
+       */
+      function render() {
+        renderFilterButtons();
+        renderCounts();
+        renderList();
+      }
+
+      // Event Listeners
+      formEl.addEventListener('submit', (event) => {
+        event.preventDefault();
+        addTask(inputEl.value);
+        inputEl.value = '';
+      });
+
+      filterButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          setFilter(btn.dataset.filter);
+        });
+      });
+
+      // Initialize application
+      renderDate();
+      state.tasks = loadTasks();
+      render();
+    })();
+  </script>
+</body>
+</html>
